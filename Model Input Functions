@@ -1,0 +1,36 @@
+# Functions for pre-processing data for ML model input
+
+def lag_dataframe(df, lagtime):
+  # Generate new dataframe that is lagged by n days, where n = lagtime
+  # NOTE: the output df does not include data measured at T=0
+
+  # Prepare empty list to hold all columns to be concatenated
+  columns = []
+
+  # Add columns for each lag date
+  for i in range(1, lagtime + 1):
+    columns.append(pd.Series(df.index.to_series().shift(i), name=f'Date T-{i}'))
+
+  # Add columns for each lag data series
+  parameters = df.columns.values.tolist()
+  for i in range(1, lagtime + 1):
+    for parameter in parameters:
+      columns.append(pd.Series(df[parameter].shift(i), name=f'{parameter} at T-{i}'))
+
+  # Concatenate all collected Series into a single DataFrame
+  lagged_df = pd.concat(columns, axis=1)
+
+  # Set index and rename for clarity, as it represents current date
+  lagged_df.index = df.index
+  lagged_df.index.name = 'Date T0'
+
+  return lagged_df
+
+def time_since_obs(df):
+    # Create mask where:
+    # value is 0 when data is available
+    # value is previous value + 1 when NaN
+
+    return df.apply(
+      lambda col: col.isna().groupby(col.notna().cumsum()).cumsum()
+    )
